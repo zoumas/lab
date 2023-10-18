@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/zoumas/lab/lgwt/hello-revised"
+	hello "github.com/zoumas/lab/lgwt/hello_revised"
 )
 
 func main() {

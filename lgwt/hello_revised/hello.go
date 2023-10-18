@@ -1,19 +1,20 @@
 package hello
 
 const (
+	// Languages Supported
 	English  = "English"
 	Spanish  = "Spanish"
 	French   = "French"
 	Japanese = "Japanese"
-)
-
-const (
+	// Hello greeting for each language
 	englishHelloPrefix  = "Hello"
 	spanishHelloPrefix  = "Hola"
 	frenchHelloPrefix   = "Bonjour"
 	japaneseHelloPrefix = "こんにちは"
 )
 
+// Hello provides a greeting to a specified name in a specified language.
+// Default language is 'English' and default name is 'World'.
 func Hello(name, language string) string {
 	if name == "" {
 		name = "World"
