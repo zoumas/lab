@@ -2,7 +2,7 @@ package iteration
 
 import "strings"
 
-// Repeat repeats s count times.
+// Repeat returns a new string consisting of count copies of the string s.
 func Repeat(s string, count int) string {
 	return RepeatBuilder(s, count)
 }
@@ -16,9 +16,9 @@ func RepeatConcat(s string, count int) string {
 }
 
 func RepeatBuilder(s string, count int) string {
-	var builder strings.Builder
+	var b strings.Builder
 	for i := 0; i < count; i++ {
-		builder.WriteString(s)
+		b.WriteString(s)
 	}
-	return builder.String()
+	return b.String()
 }
