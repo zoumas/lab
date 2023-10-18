@@ -22,7 +22,7 @@ In addition, to help you work with your code you should be able to:
 
 * View function signature.
     You should never be unsure how to call a function in Go.
-    You IDE should describe a function in terms of its documentation, its parameters and what it returns.
+    Your IDE should describe a function in terms of its documentation, its parameters and what it returns.
 * View function definition.
     If it's still not clear what a function does, you should be able to jump to the source code and try and figure it out yourself.
 * Find usages of a symbol. 
