@@ -20,5 +20,5 @@ func main() {
 	name := "World"
 
 	fmt.Fprintln(os.Stderr, "Serving on port:", port)
-	log.Fatal(http.ListenAndServe(":"+port, Greeter(name)))
+	log.Fatalln(http.ListenAndServe(":"+port, Greeter(name)))
 }

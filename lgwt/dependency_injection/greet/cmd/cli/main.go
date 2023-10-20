@@ -7,9 +7,6 @@ import (
 )
 
 func main() {
-	name := os.Getenv("USER")
-	if name == "" {
-		name = "World"
-	}
+	name := "World"
 	greet.Greet(os.Stdout, name)
 }
