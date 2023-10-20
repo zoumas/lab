@@ -19,11 +19,14 @@ func TestWallet_Deposit(t *testing.T) {
 
 func ExampleWallet_Deposit() {
 	w := wallet.Wallet{}
+	fmt.Println("Initial balance:", w.Balance())
 
 	w.Deposit(10)
 
-	fmt.Printf("%s\n", w.Balance())
-	// Output: 10 BTC
+	fmt.Println("Balance after depositing 10 BTC:", w.Balance())
+	// Output:
+	// Initial balance: 0 BTC
+	// Balance after depositing 10 BTC: 10 BTC
 }
 
 func TestWallet_Withdraw(t *testing.T) {
@@ -50,17 +53,19 @@ func TestWallet_Withdraw(t *testing.T) {
 
 func ExampleWallet_Withdraw() {
 	w := wallet.NewWallet(20)
+	fmt.Println("Initial balance:", w.Balance())
 
 	w.Withdraw(10)
-	fmt.Println(w.Balance())
+	fmt.Println("Withdrawing 10 BTC leaves the wallet with:", w.Balance())
 
 	err := w.Withdraw(20)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Trying to withdraw 20 BTC:", err)
 	}
 	// Output:
-	// 10 BTC
-	// cannot withdraw, insufficient funds
+	// Initial balance: 20 BTC
+	// Withdrawing 10 BTC leaves the wallet with: 10 BTC
+	// Trying to withdraw 20 BTC: cannot withdraw, insufficient funds
 }
 
 func assertBalance(t testing.TB, w wallet.Wallet, want bitcoin.Bitcoin) {

@@ -3,7 +3,8 @@ package bitcoin
 
 import "fmt"
 
-type Bitcoin int
+// Bitcoin represents the Bitcoin cryptocurrency
+type Bitcoin uint
 
 func (b Bitcoin) String() string {
 	return fmt.Sprintf("%d BTC", b)
