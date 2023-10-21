@@ -2,6 +2,7 @@ package countdown_test
 
 import (
 	"bytes"
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -9,49 +10,32 @@ import (
 	"github.com/zoumas/lab/lgwt/mocking/countdown"
 )
 
-// type SpySleeper struct {
-// 	Calls int
-// }
-//
-// func (s *SpySleeper) Sleep() {
-// 	s.Calls++
-// }
+func ExampleCountdown() {
+	duration := time.Duration(0)
+	sleeper := countdown.NewConfigurableSleeper(duration, time.Sleep)
+	countdown.Countdown(os.Stdout, sleeper)
 
-type SpyCountdownOperations struct {
-	Calls []string
-}
-
-const (
-	write = "write"
-	sleep = "sleep"
-)
-
-func (s *SpyCountdownOperations) Sleep() {
-	s.Calls = append(s.Calls, sleep)
-}
-
-func (s *SpyCountdownOperations) Write(p []byte) (n int, err error) {
-	s.Calls = append(s.Calls, write)
-	return
+	// Output:
+	// 3
+	// 2
+	// 1
+	// Go!
 }
 
 func TestCountdown(t *testing.T) {
 	t.Run("printing", func(t *testing.T) {
 		buffer := &bytes.Buffer{}
-
 		sleeper := &SpyCountdownOperations{}
 
 		countdown.Countdown(buffer, sleeper)
 
-		got := buffer.String()
 		want := `3
 2
 1
-Go!`
-
-		if got != want {
-			t.Errorf("\ngot:\n%q\nwant:\n%q", got, want)
-		}
+Go!
+`
+		got := buffer.String()
+		assertStrings(t, got, want)
 	})
 
 	t.Run("sleep before every print", func(t *testing.T) {
@@ -69,18 +53,10 @@ Go!`
 			write,
 		}
 
-		if got := spySleeperPrinter.Calls; !slices.Equal(got, want) {
-			t.Errorf("\nwanted calls:\n%v\ngot:\n%v", want, got)
+		if !slices.Equal(spySleeperPrinter.Calls, want) {
+			t.Errorf("\nmismatched calls\ngot: %v\nwant: %v", spySleeperPrinter.Calls, want)
 		}
 	})
-}
-
-type SpyTime struct {
-	durationSlept time.Duration
-}
-
-func (s *SpyTime) Sleep(duration time.Duration) {
-	s.durationSlept = duration
 }
 
 func TestConfigurableSleeper(t *testing.T) {
@@ -92,6 +68,48 @@ func TestConfigurableSleeper(t *testing.T) {
 	sleeper.Sleep()
 
 	if spyTime.durationSlept != sleepTime {
-		t.Errorf("\nshould have slept for %v\nslept for %v", sleepTime, spyTime.durationSlept)
+		t.Errorf("\nshould have slept for %v\nbut slept for %v", sleepTime, spyTime.durationSlept)
 	}
+}
+
+// type SpySleeper struct {
+// 	Calls int
+// }
+//
+// func (s *SpySleeper) Sleep() {
+// 	s.Calls++
+// }
+
+type SpyCountdownOperations struct {
+	Calls []string
+}
+
+const (
+	sleep = "sleep"
+	write = "write"
+)
+
+func (s *SpyCountdownOperations) Sleep() {
+	s.Calls = append(s.Calls, sleep)
+}
+
+func (s *SpyCountdownOperations) Write(p []byte) (n int, err error) {
+	s.Calls = append(s.Calls, write)
+	return
+}
+
+func assertStrings(t testing.TB, got, want string) {
+	t.Helper()
+
+	if got != want {
+		t.Errorf("\ngot:\n%q\nwant:\n%q", got, want)
+	}
+}
+
+type SpyTime struct {
+	durationSlept time.Duration
+}
+
+func (s *SpyTime) Sleep(duration time.Duration) {
+	s.durationSlept = duration
 }

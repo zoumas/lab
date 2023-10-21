@@ -8,6 +8,6 @@ import (
 )
 
 func main() {
-	sleeper := countdown.NewConfigurableSleeper(time.Second/2, time.Sleep)
+	sleeper := countdown.NewConfigurableSleeper(time.Second/5, time.Sleep)
 	countdown.Countdown(os.Stdout, sleeper)
 }
