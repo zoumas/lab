@@ -42,8 +42,7 @@ func BenchmarkCheckWebsites(b *testing.B) {
 
 // sequentially: 2034070379 ns/op => 2.034 sec
 // channels: 20937743 ns/op => 0.0209 sec. About 100 times faster
-// WaitGroup & Mutext: 2032130619 ns/op => 2.03213062 sec. Just like the sequential
-
+// WaitGroup & Mutex:	2041893632 => 2.04 sec.
 func mockWebsiteChecker(url string) bool {
 	return url != "waat://furhurterwe.geds"
 }

@@ -41,11 +41,13 @@ func checkWebsites(wc WebsiteChecker, urls []string) map[string]bool {
 	wg.Add(l)
 	var mu sync.Mutex
 	for _, url := range urls {
-		mu.Lock()
-		results[url] = wc(url)
-		mu.Unlock()
+		go func(url string) {
+			mu.Lock()
+			results[url] = wc(url)
+			mu.Unlock()
 
-		wg.Done()
+			wg.Done()
+		}(url)
 	}
 	wg.Wait()
 
