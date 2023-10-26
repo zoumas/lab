@@ -9,33 +9,23 @@ import (
 )
 
 func TestCheckWebsites(t *testing.T) {
-	websites := []string{
+	urls := []string{
 		"http://google.com",
-		"http://blog.gypsydave5.com",
+		"http://blog.gyspydave5.com",
 		"waat://furhurterwe.geds",
 	}
 
 	want := map[string]bool{
 		"http://google.com":          true,
-		"http://blog.gypsydave5.com": true,
+		"http://blog.gyspydave5.com": true,
 		"waat://furhurterwe.geds":    false,
 	}
 
-	got := webcheck.CheckWebsites(mockWebsiteChecker, websites)
-
-	assertMaps(t, got, want)
-}
-
-func assertMaps[K, V comparable](t testing.TB, got, want map[K]V) {
-	t.Helper()
+	got := webcheck.CheckWebsites(mockWebsiteChecker, urls)
 
 	if !maps.Equal(got, want) {
-		t.Errorf("\ngot:\n%#v\nwant:\n%#v", got, want)
+		t.Errorf("\ngot:\n%v\nwant:\n%v", got, want)
 	}
-}
-
-func mockWebsiteChecker(url string) bool {
-	return url != "waat://furhurterwe.geds"
 }
 
 func BenchmarkCheckWebsites(b *testing.B) {
@@ -50,10 +40,15 @@ func BenchmarkCheckWebsites(b *testing.B) {
 	}
 }
 
-// sequentiatly =>  2.04 sec
-// concurrently =>  0.02 sec
+// sequentially: 2034070379 ns/op => 2.034 sec
+// channels: 20937743 ns/op => 0.0209 sec. About 100 times faster
+// WaitGroup & Mutext: 2032130619 ns/op => 2.03213062 sec. Just like the sequential
 
-func slowStubWebsiteChecker(_ string) bool {
+func mockWebsiteChecker(url string) bool {
+	return url != "waat://furhurterwe.geds"
+}
+
+func slowStubWebsiteChecker(url string) bool {
 	time.Sleep(20 * time.Millisecond)
 	return true
 }
