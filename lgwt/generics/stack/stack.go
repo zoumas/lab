@@ -1,36 +1,28 @@
 package stack
 
-import "errors"
-
-var PopErr = errors.New("could not pop element because stack is empty")
-
+// Stack represents a LIFO Abstract Data Type of any value
 type Stack[T any] struct {
-	buf []T
+	b []T
 }
 
-func (s *Stack[T]) Push(element T) {
-	s.buf = append(s.buf, element)
+// Push stores values at the top of the Stack
+func (s *Stack[T]) Push(value T) {
+	s.b = append(s.b, value)
 }
 
-func (s *Stack[T]) Pop() (element T, err error) {
-	top := len(s.buf) - 1
-	if top < 0 {
-		err = PopErr
-		return
+// Pop retrieves and delete the value at the top of the Stack
+func (s *Stack[T]) Pop() (T, bool) {
+	if s.IsEmpty() {
+		var zero T
+		return zero, false
 	}
-	element = s.buf[top]
-	s.buf = s.buf[:top]
-	return
-}
 
-func (s *Stack[T]) Peek() (element T) {
-	top := len(s.buf) - 1
-	if top < 0 {
-		return
-	}
-	return s.buf[top]
+	top := len(s.b) - 1
+	v := s.b[top]
+	s.b = s.b[:top]
+	return v, true
 }
 
 func (s *Stack[T]) IsEmpty() bool {
-	return len(s.buf) == 0
+	return len(s.b) == 0
 }
