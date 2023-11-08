@@ -1,3 +1,3 @@
 # aggrss
 
-A Go RSS Aggregator Web Server
+A Go RSS aggregator

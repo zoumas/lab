@@ -17,15 +17,14 @@ func main() {
 		log.Fatal("Error loading .env file:", err)
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
+	port, ok := os.LookupEnv("PORT")
+	if !ok {
 		log.Fatal("PORT environment variable is not set")
 	}
 
-	router := chi.NewRouter()
-	router.Use(middleware.Logger)
-
-	router.Use(cors.Handler(cors.Options{
+	mainRouter := chi.NewRouter()
+	mainRouter.Use(middleware.Logger)
+	mainRouter.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
@@ -35,17 +34,17 @@ func main() {
 	}))
 
 	v1Router := chi.NewRouter()
-	v1Router.Get("/healthz", readinessHandler)
-	v1Router.Get("/err", errorHandler)
+	v1Router.Get("/readiness", http.HandlerFunc(readinessHandler))
+	v1Router.Get("/err", http.HandlerFunc(errHandler))
 
-	router.Mount("/v1", v1Router)
+	mainRouter.Mount("/v1", v1Router)
 
 	server := &http.Server{
-		Handler: router,
 		Addr:    ":" + port,
+		Handler: mainRouter,
 	}
 
-	log.Println("[aggrs] serving on port:", port)
+	log.Println("serving on port:", port)
 	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)

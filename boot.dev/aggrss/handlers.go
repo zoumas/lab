@@ -3,9 +3,17 @@ package main
 import "net/http"
 
 func readinessHandler(w http.ResponseWriter, _ *http.Request) {
-	respondWithJSON(w, http.StatusOK, struct{}{})
+	type statusResponse struct {
+		Status string `json:"status"`
+	}
+
+	respondWithJSON(w,
+		http.StatusOK,
+		statusResponse{Status: http.StatusText(http.StatusOK)})
 }
 
-func errorHandler(w http.ResponseWriter, _ *http.Request) {
-	respondWithError(w, http.StatusBadRequest, "Something went wrong")
+func errHandler(w http.ResponseWriter, _ *http.Request) {
+	respondWithError(w,
+		http.StatusInternalServerError,
+		http.StatusText(http.StatusInternalServerError))
 }

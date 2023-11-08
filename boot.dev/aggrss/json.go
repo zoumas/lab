@@ -9,24 +9,25 @@ import (
 func respondWithJSON(w http.ResponseWriter, statusCode int, payload any) {
 	dat, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Failed to marshal JSON response: %v\n", payload)
+		log.Printf("Failed to marshal %v to JSON. Error: %s\n", payload, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
+	if statusCode != http.StatusOK {
+		if statusCode >= http.StatusInternalServerError {
+			log.Printf("Respond with %v status code\n", statusCode)
+		}
+		w.WriteHeader(statusCode)
+	}
 	w.Write(dat)
 }
 
-type errResponse struct {
-	ErrorMessage string `json:"error"`
-}
-
 func respondWithError(w http.ResponseWriter, statusCode int, errorMessage string) {
-	if statusCode >= http.StatusInternalServerError {
-		log.Println("Responding with 5XX error:", errorMessage)
+	type errorResponse struct {
+		Message string `json:"error"`
 	}
 
-	respondWithJSON(w, statusCode, errResponse{errorMessage})
+	respondWithJSON(w, statusCode, errorResponse{errorMessage})
 }
