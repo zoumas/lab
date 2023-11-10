@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"path"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/zoumas/lab/boot.dev/aggrss/internal/database"
 )
@@ -61,14 +61,17 @@ func (c *config) listFollowedFeeds(w http.ResponseWriter, r *http.Request, user 
 }
 
 func (c *config) unfollowFeed(w http.ResponseWriter, r *http.Request, user database.User) {
-	feedID := path.Base(r.URL.Path)
-	id, err := uuid.Parse(feedID)
+	feedFollowIDParam := chi.URLParam(r, "feed_follow_id")
+	feedFollowID, err := uuid.Parse(feedFollowIDParam)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid feed id")
+		respondWithError(w, http.StatusBadRequest, "Couldn't parse feed_follow_id")
 		return
 	}
 
-	err = c.DB.DeleteFeedFollowByID(r.Context(), id)
+	err = c.DB.DeleteFeedFollowByID(r.Context(), database.DeleteFeedFollowByIDParams{
+		ID:     feedFollowID,
+		UserID: user.ID,
+	})
 	if err != nil {
 		respondWithError(
 			w,
