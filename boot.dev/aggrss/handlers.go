@@ -2,30 +2,55 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/zoumas/lab/boot.dev/aggrss/internal/database"
 )
 
-func (c *apiConfig) getUserByApiKey(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	fields := strings.Fields(authHeader)
-	if len(fields) != 2 {
-		respondWithError(w, http.StatusBadRequest, "Empty Authorization Token")
-		return
+func (c *apiConfig) createFeed(w http.ResponseWriter, r *http.Request, user database.User) {
+	type parameters struct {
+		Name string `json:"name"`
+		Url  string `json:"url"`
 	}
+	params := parameters{}
 
-	apikey := fields[1]
-
-	user, err := c.DB.GetUserByApiKey(r.Context(), apikey)
+	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if params.Name == "" {
+		respondWithError(w, http.StatusBadRequest, "name shouldn't be empty")
+		return
+	}
+	if params.Url == "" {
+		respondWithError(w, http.StatusBadRequest, "url shouldn't be empty")
 		return
 	}
 
+	feed, err := c.DB.CreateFeed(r.Context(), database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		Name:      params.Name,
+		Url:       params.Url,
+		UserID:    user.ID,
+	})
+	if err != nil {
+		respondWithError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to create feed: %q", err),
+		)
+	}
+
+	respondWithJSON(w, http.StatusCreated, feed)
+}
+
+func (c *apiConfig) getUserByApiKey(w http.ResponseWriter, r *http.Request, user database.User) {
 	respondWithJSON(w, http.StatusOK, user)
 }
 
@@ -39,6 +64,8 @@ func (c *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// should be checked by the database?
 	if params.Name == "" {
 		respondWithError(w, http.StatusBadRequest, "Field 'name' must not be empty")
 		return
