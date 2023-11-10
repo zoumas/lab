@@ -3,11 +3,31 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/zoumas/lab/boot.dev/aggrss/internal/database"
 )
+
+func (c *apiConfig) getUserByApiKey(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	fields := strings.Fields(authHeader)
+	if len(fields) != 2 {
+		respondWithError(w, http.StatusBadRequest, "Empty Authorization Token")
+		return
+	}
+
+	apikey := fields[1]
+
+	user, err := c.DB.GetUserByApiKey(r.Context(), apikey)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, user)
+}
 
 func (c *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
