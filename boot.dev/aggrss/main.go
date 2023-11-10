@@ -15,6 +15,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type config struct {
+	DB *database.Queries
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -42,7 +46,7 @@ func main() {
 		log.Fatalf("Failed to connect to database: %q", err)
 	}
 
-	apiCfg := &apiConfig{DB: database.New(conn)}
+	apiCfg := &config{DB: database.New(conn)}
 
 	mainRouter := chi.NewRouter()
 	mainRouter.Use(cors.Handler(cors.Options{
@@ -59,7 +63,7 @@ func main() {
 	v1Router.Get("/healthz", readinessHandler)
 	v1Router.Get("/err", errorHandler)
 
-	v1Router.Post("/users", apiCfg.createUserHandler)
+	v1Router.Post("/users", apiCfg.createUser)
 	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.getUserByApiKey))
 
 	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.createFeed))

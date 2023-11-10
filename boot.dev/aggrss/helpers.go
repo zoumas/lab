@@ -6,6 +6,26 @@ import (
 	"net/http"
 )
 
+func readinessHandler(w http.ResponseWriter, _ *http.Request) {
+	type statusResponse struct {
+		StatusText string `json:"status"`
+	}
+
+	respondWithJSON(
+		w,
+		http.StatusOK,
+		statusResponse{http.StatusText(http.StatusOK)},
+	)
+}
+
+func errorHandler(w http.ResponseWriter, _ *http.Request) {
+	respondWithError(
+		w,
+		http.StatusInternalServerError,
+		http.StatusText(http.StatusInternalServerError),
+	)
+}
+
 func respondWithJSON(w http.ResponseWriter, statusCode int, payload any) {
 	data, err := json.Marshal(payload)
 	if err != nil {
