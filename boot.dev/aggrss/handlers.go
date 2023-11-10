@@ -4,11 +4,93 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/zoumas/lab/boot.dev/aggrss/internal/database"
 )
+
+func (c *apiConfig) listFollowedFeeds(w http.ResponseWriter, r *http.Request, user database.User) {
+	followedFeeds, err := c.DB.ListFeedFollowsByUser(r.Context(), user.ID)
+	if err != nil {
+		respondWithError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to retrieve followed fields: %q", err),
+		)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, followedFeeds)
+}
+
+func (c *apiConfig) unfollowFeed(w http.ResponseWriter, r *http.Request, user database.User) {
+	feedID := path.Base(r.URL.Path)
+	id, err := uuid.Parse(feedID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid feed id")
+		return
+	}
+
+	err = c.DB.DeleteFeedFollowByID(r.Context(), id)
+	if err != nil {
+		respondWithError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to unfollow feed: %q", err),
+		)
+	}
+}
+
+func (c *apiConfig) followFeed(w http.ResponseWriter, r *http.Request, user database.User) {
+	type parameters struct {
+		FeedID uuid.UUID `json:"feed_id"`
+	}
+	params := parameters{}
+
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		respondWithError(
+			w,
+			http.StatusBadRequest,
+			fmt.Sprintf("Failed to marshal request: %q", err),
+		)
+		return
+	}
+
+	feedFollow, err := c.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		FeedID:    params.FeedID,
+		UserID:    user.ID,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		respondWithError(
+			w,
+			http.StatusBadRequest,
+			fmt.Sprintf("Failed to follow feed: %q", err),
+		)
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, feedFollow)
+}
+
+func (c *apiConfig) listFeeds(w http.ResponseWriter, r *http.Request) {
+	feeds, err := c.DB.ListFeeds(r.Context())
+	if err != nil {
+		respondWithError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to retrieve feeds: %q", err),
+		)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, feeds)
+}
 
 func (c *apiConfig) createFeed(w http.ResponseWriter, r *http.Request, user database.User) {
 	type parameters struct {
@@ -45,9 +127,31 @@ func (c *apiConfig) createFeed(w http.ResponseWriter, r *http.Request, user data
 			http.StatusInternalServerError,
 			fmt.Sprintf("Failed to create feed: %q", err),
 		)
+		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, feed)
+	feedFollow, err := c.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		FeedID:    feed.ID,
+		UserID:    user.ID,
+		CreatedAt: feed.CreatedAt,
+		UpdatedAt: feed.UpdatedAt,
+	})
+	if err != nil {
+		respondWithError(
+			w,
+			http.StatusInternalServerError,
+			fmt.Sprintf("Failed to follow feed: %q", err),
+		)
+		return
+	}
+
+	type response struct {
+		Feed       database.Feed       `json:"feed"`
+		FeedFollow database.FeedFollow `json:"feed_follow"`
+	}
+
+	respondWithJSON(w, http.StatusCreated, response{feed, feedFollow})
 }
 
 func (c *apiConfig) getUserByApiKey(w http.ResponseWriter, r *http.Request, user database.User) {
