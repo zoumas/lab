@@ -1,55 +1,44 @@
 package main
 
 import (
-	"html/template"
+	"database/sql"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/joho/godotenv"
+	"github.com/zoumas/lab/htmx/demo/internal/database"
+
+	_ "github.com/lib/pq"
 )
 
-func GetFilms(w http.ResponseWriter, _ *http.Request) {
-	tmpl, err := template.ParseFiles("index.html")
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	films := map[string][]Film{
-		"Films": {
-			{Title: "The Godfather", Director: "Francis Ford Coppola"},
-			{Title: "Blade Runner", Director: "Ridley Scott"},
-			{Title: "The Thing", Director: "John Carpenter"},
-		},
-	}
-
-	tmpl.Execute(w, films)
-}
-
-func AddFilm(w http.ResponseWriter, r *http.Request) {
-	time.Sleep(2 * time.Second)
-
-	title := r.PostFormValue("title")
-	director := r.PostFormValue("director")
-
-	tmpl, err := template.ParseFiles("index.html")
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	err = tmpl.ExecuteTemplate(w, "film-list-element", Film{title, director})
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+type Shared struct {
+	DB *database.Queries
 }
 
 func main() {
-	const port = "8000"
+	env, err := godotenv.Read()
+	if err != nil {
+		log.Fatalf("error loading .env file : %q", err)
+	}
+
+	port, ok := env["PORT"]
+	if !ok {
+		log.Fatal("PORT is not set in .env")
+	}
+
+	dsn, ok := env["DSN"]
+	if !ok {
+		log.Fatal("DSN is not set in .env")
+	}
+
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		log.Fatalf("Failed to connect to database : %q", err)
+	}
+	s := Shared{DB: database.New(db)}
 
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
@@ -66,27 +55,27 @@ func main() {
 		type statusResponse struct {
 			Status string `json:"status"`
 		}
-		respondWithJSON(
-			w,
-			http.StatusOK,
-			statusResponse{http.StatusText(http.StatusOK)},
-		)
+		respondWithJSON(w, http.StatusOK, statusResponse{http.StatusText(http.StatusOK)})
 	})
 	router.Get("/err", func(w http.ResponseWriter, _ *http.Request) {
-		respondWithError(
-			w,
-			http.StatusInternalServerError,
-			http.StatusText(http.StatusInternalServerError),
-		)
+		respondWithError(w, http.StatusInternalServerError, ErrorResponse{
+			Error:   http.StatusText(http.StatusInternalServerError),
+			Details: "This endpoint always returns an error",
+		})
 	})
 
-	router.Get("/films", GetFilms)
-	router.Post("/films", AddFilm)
+	router.Get("/", s.MainPage)
+
+	router.Post("/films", s.CreateFilm)
+	router.Get("/films", s.GetFilms)
+
+	router.Post("/add-film", s.CreateFilmFromHTMX)
 
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
 	}
+
 	log.Println("serving on port:", port)
 	log.Fatal(server.ListenAndServe())
 }
