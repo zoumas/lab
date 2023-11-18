@@ -13,11 +13,19 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, created_at, updated_at, name, api_key)
-VALUES ($1, $2, $3, $4, 
+INSERT INTO users (
+  id, 
+  created_at, 
+  updated_at, 
+  name, 
+  api_key
+) VALUES (
+  $1, 
+  $2, 
+  $3, 
+  $4, 
   encode(sha256(random()::text::bytea), 'hex')
-)
-RETURNING id, created_at, updated_at, name, api_key
+) RETURNING id, created_at, updated_at, name, api_key
 `
 
 type CreateUserParams struct {
@@ -46,8 +54,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByApiKey = `-- name: GetUserByApiKey :one
-SELECT id, created_at, updated_at, name, api_key
-FROM users
+SELECT id, created_at, updated_at, name, api_key FROM users
 WHERE api_key = $1
 `
 
@@ -62,4 +69,37 @@ func (q *Queries) GetUserByApiKey(ctx context.Context, apiKey string) (User, err
 		&i.ApiKey,
 	)
 	return i, err
+}
+
+const getUsers = `-- name: GetUsers :many
+SELECT id, created_at, updated_at, name, api_key FROM users
+`
+
+func (q *Queries) GetUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+			&i.ApiKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

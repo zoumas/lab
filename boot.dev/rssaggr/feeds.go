@@ -6,9 +6,45 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/zoumas/lab/boot.dev/rssaggr/internal/database"
 )
+
+type Feed struct {
+	ID            uuid.UUID  `json:"id"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	Name          string     `json:"name"`
+	Url           string     `json:"url"`
+	LastFetchedAt *time.Time `json:"last_fetched_at"`
+}
+
+func databaseFeedToFeed(f database.Feed) Feed {
+	var t *time.Time
+	if f.LastFetchedAt.Valid {
+		// copy local var so we don't have to keep the db object in memory
+		last_fetched_at := f.LastFetchedAt.Time
+		t = &last_fetched_at
+	}
+
+	return Feed{
+		ID:            f.ID,
+		CreatedAt:     f.CreatedAt,
+		UpdatedAt:     f.UpdatedAt,
+		Name:          f.Name,
+		Url:           f.Url,
+		LastFetchedAt: t,
+	}
+}
+
+func databaseFeedsToFeeds(feeds []database.Feed) []Feed {
+	fs := make([]Feed, 0, len(feeds))
+	for _, f := range feeds {
+		fs = append(fs, databaseFeedToFeed(f))
+	}
+	return fs
+}
 
 func (api *Api) CreateFeed(w http.ResponseWriter, r *http.Request, u database.User) {
 	type parameters struct {
@@ -55,17 +91,38 @@ func (api *Api) CreateFeed(w http.ResponseWriter, r *http.Request, u database.Us
 		respondWithError(
 			w,
 			http.StatusInternalServerError,
-			fmt.Sprint("unable to create follow feed:", err),
+			fmt.Sprint("unable to follow created feed:", err),
 		)
 		return
 	}
 
 	type response struct {
-		Feed       database.Feed       `json:"feed"`
+		Feed       Feed                `json:"feed"`
 		FeedFollow database.FeedFollow `json:"feed_follow"`
 	}
 
-	respondWithJSON(w, http.StatusCreated, response{feed, feedFollow})
+	respondWithJSON(w, http.StatusCreated, response{databaseFeedToFeed(feed), feedFollow})
+}
+
+func (api *Api) DeleteFeed(w http.ResponseWriter, r *http.Request, u database.User) {
+	feedID := chi.URLParam(r, "feed_id")
+
+	feedUUID, err := uuid.Parse(feedID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "error parsing url parameter")
+		return
+	}
+
+	err = api.DB.DeleteFeed(r.Context(), database.DeleteFeedParams{
+		ID:     feedUUID,
+		UserID: u.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "failed to delete feed: "+err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (api *Api) GetFeeds(w http.ResponseWriter, r *http.Request) {
@@ -78,5 +135,5 @@ func (api *Api) GetFeeds(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	respondWithJSON(w, http.StatusOK, feeds)
+	respondWithJSON(w, http.StatusOK, databaseFeedsToFeeds(feeds))
 }

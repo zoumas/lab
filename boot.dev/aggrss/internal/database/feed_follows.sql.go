@@ -13,60 +13,60 @@ import (
 )
 
 const createFeedFollow = `-- name: CreateFeedFollow :one
-INSERT INTO feed_follows(id, feed_id, user_id, created_at, updated_at)
+INSERT INTO feed_follows (id, created_at, updated_at, feed_id, user_id)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, feed_id, user_id, created_at, updated_at
+RETURNING id, created_at, updated_at, feed_id, user_id
 `
 
 type CreateFeedFollowParams struct {
 	ID        uuid.UUID `json:"id"`
-	FeedID    uuid.UUID `json:"feed_id"`
-	UserID    uuid.UUID `json:"user_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	FeedID    uuid.UUID `json:"feed_id"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) CreateFeedFollow(ctx context.Context, arg CreateFeedFollowParams) (FeedFollow, error) {
 	row := q.db.QueryRowContext(ctx, createFeedFollow,
 		arg.ID,
-		arg.FeedID,
-		arg.UserID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.FeedID,
+		arg.UserID,
 	)
 	var i FeedFollow
 	err := row.Scan(
 		&i.ID,
-		&i.FeedID,
-		&i.UserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FeedID,
+		&i.UserID,
 	)
 	return i, err
 }
 
-const deleteFeedFollowByID = `-- name: DeleteFeedFollowByID :exec
-DELETE FROM feed_follows WHERE id = $1 AND user_id = $2
+const deleteFeedFollow = `-- name: DeleteFeedFollow :exec
+DELETE FROM feed_follows
+WHERE id = $1 AND user_id = $2
 `
 
-type DeleteFeedFollowByIDParams struct {
+type DeleteFeedFollowParams struct {
 	ID     uuid.UUID `json:"id"`
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (q *Queries) DeleteFeedFollowByID(ctx context.Context, arg DeleteFeedFollowByIDParams) error {
-	_, err := q.db.ExecContext(ctx, deleteFeedFollowByID, arg.ID, arg.UserID)
+func (q *Queries) DeleteFeedFollow(ctx context.Context, arg DeleteFeedFollowParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFeedFollow, arg.ID, arg.UserID)
 	return err
 }
 
-const listFeedFollowsByUser = `-- name: ListFeedFollowsByUser :many
-SELECT id, feed_id, user_id, created_at, updated_at
-FROM feed_follows
+const getFeedFollows = `-- name: GetFeedFollows :many
+SELECT id, created_at, updated_at, feed_id, user_id FROM feed_follows
 WHERE user_id = $1
 `
 
-func (q *Queries) ListFeedFollowsByUser(ctx context.Context, userID uuid.UUID) ([]FeedFollow, error) {
-	rows, err := q.db.QueryContext(ctx, listFeedFollowsByUser, userID)
+func (q *Queries) GetFeedFollows(ctx context.Context, userID uuid.UUID) ([]FeedFollow, error) {
+	rows, err := q.db.QueryContext(ctx, getFeedFollows, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +76,10 @@ func (q *Queries) ListFeedFollowsByUser(ctx context.Context, userID uuid.UUID) (
 		var i FeedFollow
 		if err := rows.Scan(
 			&i.ID,
-			&i.FeedID,
-			&i.UserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FeedID,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}

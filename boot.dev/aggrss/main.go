@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,41 +15,32 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type config struct {
+type ApiConfig struct {
 	DB *database.Queries
 }
 
 func main() {
-	err := godotenv.Load()
+	env, err := godotenv.Read()
 	if err != nil {
-		log.Fatalf("Failed to load .env: %q", err)
+		log.Fatalf("Error loading .env file: %q", err)
 	}
 
-	port, ok := os.LookupEnv("PORT")
-	if !ok {
-		log.Fatal("Failed to load PORT environment variable from .env")
-	}
-	if port == "" {
-		log.Fatal("PORT environment variable shouldn't be empty")
+	port, set := env["PORT"]
+	if !set {
+		log.Fatal("PORT environment variable is not set")
 	}
 
-	dbURL, ok := os.LookupEnv("DB_URL")
-	if !ok {
-		log.Fatal("Failed to load DB_URL environment variable from .env")
-	}
-	if dbURL == "" {
-		log.Fatal("DB_URL environment variable shouldn't be empty")
+	dbURL, set := env["DB"]
+	if !set {
+		log.Fatal("DB environment variable is not set")
 	}
 
-	conn, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %q", err)
-	}
+	db, err := sql.Open("postgres", dbURL)
 
-	apiCfg := &config{DB: database.New(conn)}
+	cfg := &ApiConfig{DB: database.New(db)}
 
-	mainRouter := chi.NewRouter()
-	mainRouter.Use(cors.Handler(cors.Options{
+	router := chi.NewRouter()
+	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
@@ -57,30 +48,53 @@ func main() {
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
-	mainRouter.Use(middleware.Logger)
+	router.Use(middleware.Logger)
 
 	v1Router := chi.NewRouter()
-	v1Router.Get("/healthz", readinessHandler)
-	v1Router.Get("/err", errorHandler)
+	v1Router.Get("/users", cfg.WithAuth(cfg.GetUserByApiKey))
+	v1Router.Post("/users", cfg.CreateUser)
 
-	v1Router.Post("/users", apiCfg.createUser)
-	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.getUserByApiKey))
+	v1Router.Get("/feeds", cfg.GetFeeds)
+	v1Router.Post("/feeds", cfg.WithAuth(cfg.CreateFeed))
 
-	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.createFeed))
-	v1Router.Get("/feeds", apiCfg.listFeeds)
+	v1Router.Get("/feed_follows", cfg.WithAuth(cfg.GetFeedFollows))
+	v1Router.Post("/feed_follows", cfg.WithAuth(cfg.CreateFeedFollow))
+	v1Router.Delete("/feed_follows/{feed_follow_id}", cfg.WithAuth(cfg.DeleteFeedFollow))
 
-	v1Router.Post("/feed_follows", apiCfg.middlewareAuth(apiCfg.followFeed))
-	v1Router.Get("/feed_follows", apiCfg.middlewareAuth(apiCfg.listFollowedFeeds))
-	v1Router.Delete("/feed_follows/{feed_follow_id}", apiCfg.middlewareAuth(apiCfg.unfollowFeed))
+	v1Router.Get("/posts", cfg.WithAuth(cfg.GetPostsForUser))
 
-	mainRouter.Mount("/v1", v1Router)
+	adminRouter := chi.NewRouter()
+	adminRouter.HandleFunc("/readiness", func(w http.ResponseWriter, _ *http.Request) {
+		type statusResponse struct {
+			Status string `json:"status"`
+		}
+
+		respondWithJSON(
+			w,
+			http.StatusOK,
+			statusResponse{http.StatusText(http.StatusOK)},
+		)
+	})
+	adminRouter.HandleFunc("/err", func(w http.ResponseWriter, _ *http.Request) {
+		respondWithError(
+			w,
+			http.StatusInternalServerError,
+			http.StatusText(http.StatusInternalServerError),
+		)
+	})
+	adminRouter.Get("/users", cfg.GetUsers)
+
+	v1Router.Mount("/admin", adminRouter)
+	router.Mount("/v1", v1Router)
 
 	server := &http.Server{
-		Addr:    "localhost:" + port,
-		Handler: mainRouter,
+		Addr:    ":" + port,
+		Handler: router,
 	}
 
-	log.Println("[aggrss]: serving on port:", port)
+	go startScraping(cfg.DB, 5, time.Minute/2)
+
+	log.Println("serving on port:", port)
 	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)

@@ -5,14 +5,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
-	"github.com/zoumas/lab/boot.dev/rssaggr/internal/database"
-
 	_ "github.com/lib/pq"
+	"github.com/zoumas/lab/boot.dev/rssaggr/internal/database"
 )
 
 func main() {
@@ -65,11 +65,14 @@ func main() {
 	v1Router.Get("/users", api.WithAuth(api.GetUserByApiKey))
 
 	v1Router.Post("/feeds", api.WithAuth(api.CreateFeed))
+	v1Router.Delete("/feeds/{feed_id}", api.WithAuth(api.DeleteFeed))
 	v1Router.Get("/feeds", api.GetFeeds)
 
 	v1Router.Post("/feed_follows", api.WithAuth(api.CreateFeedFollow))
 	v1Router.Delete("/feed_follows/{feedFollowID}", api.WithAuth(api.DeleteFeedFollow))
 	v1Router.Get("/feed_follows", api.WithAuth(api.GetFeedFollows))
+
+	v1Router.Get("/posts", api.WithAuth(api.GetPostsForUser))
 
 	mainRouter.Mount("/v1", v1Router)
 
@@ -77,6 +80,10 @@ func main() {
 		Addr:    ":" + port,
 		Handler: mainRouter,
 	}
+
+	const workers = 10
+	const interval = time.Minute
+	go startScraping(api.DB, workers, interval)
 
 	log.Println("serving on port:", port)
 	err = server.ListenAndServe()

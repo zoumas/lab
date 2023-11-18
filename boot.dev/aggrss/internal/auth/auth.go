@@ -2,27 +2,25 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 )
 
-// GetApiKey extracts an API Key from the headers of an HTTP request
-// Example:
-// Authorization: ApiKey <insert apikey here>
-func GetApiKey(headers http.Header) (string, error) {
-	val := headers.Get("Authorization")
-	if val == "" {
-		return "", errors.New("no authentication info found")
+const authByApiKey = "ApiKey"
+
+func GetApiKey(h http.Header) (string, error) {
+	authorizationHeader := h.Get("Authorization")
+
+	authorizationFields := strings.Fields(authorizationHeader)
+	if len(authorizationFields) != 2 {
+		return "", errors.New("malformed request body")
 	}
 
-	fields := strings.Fields(val)
-	if len(fields) != 2 {
-		return "", errors.New("malformed authentication header")
+	authorizationMethod := authorizationFields[0]
+	if authorizationMethod != authByApiKey {
+		return "", fmt.Errorf("%s authorization method is not supported", authorizationMethod)
 	}
 
-	if fields[0] != "ApiKey" {
-		return "", errors.New("malformed first part of authentication header")
-	}
-
-	return fields[1], nil
+	return authorizationFields[1], nil
 }
