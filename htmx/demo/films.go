@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"html/template"
+	"log"
 	"net/http"
 
 	"github.com/zoumas/lab/htmx/demo/internal/database"
@@ -11,18 +12,21 @@ import (
 func (s *Shared) MainPage(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("index.html")
 	if err != nil {
+		log.Println("Failed to parse index.html")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	dbFilms, err := s.DB.GetFilms(r.Context())
 	if err != nil {
+		log.Println("Failed to get films from database")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	err = tmpl.Execute(w, map[string][]database.Film{"Films": dbFilms})
 	if err != nil {
+		log.Println("Failed to write films to index.html")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
