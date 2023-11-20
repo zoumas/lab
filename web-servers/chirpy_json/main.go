@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -9,12 +10,24 @@ import (
 
 type ApiConfig struct {
 	fileServerHits int
+	DB             *DB
 }
 
 func main() {
+	debug := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if *debug == true {
+		log.Println("DEBUG MODE")
+	}
+
 	port := "8080"
 
-	cfg := &ApiConfig{}
+	db, err := NewDB("database.json")
+	if err != nil {
+		log.Fatalf("Failed to connect to database : %q", err)
+	}
+
+	cfg := &ApiConfig{DB: db}
 	mainRouter := chi.NewRouter()
 
 	appRouter := chi.NewRouter()
@@ -37,7 +50,15 @@ func main() {
 		w.Write([]byte(http.StatusText(http.StatusOK)))
 	}))
 
-	apiRouter.Post("/validate_chirp", ValidateChirp)
+	chirpRouter := chi.NewRouter()
+	chirpRouter.Post("/", cfg.CreateChirp)
+	chirpRouter.Get("/", cfg.GetAllChirps)
+	chirpRouter.Get("/{id}", cfg.GetChirpByID)
+	apiRouter.Mount("/chirps", chirpRouter)
+
+	userRouter := chi.NewRouter()
+	userRouter.Post("/", cfg.CreateUser)
+	apiRouter.Mount("/users", userRouter)
 
 	adminRouter := chi.NewRouter()
 	adminRouter.Get("/metrics", http.HandlerFunc(cfg.ReportMetrics))
