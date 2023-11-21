@@ -38,6 +38,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database : %q", err)
 	}
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Failed to ping the database : %q", err)
+	}
 	s := Shared{DB: database.New(db)}
 
 	router := chi.NewRouter()
