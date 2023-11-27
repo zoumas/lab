@@ -23,9 +23,7 @@ func main() {
 	db.Raw("SELECT version()").Scan(&dbVersion)
 	log.Println("Database Version :", dbVersion)
 
-	router := app.ConfiguredRouter(env)
-	server := app.ConfiguredServer(env, router)
-
+	app := app.New(env, db)
 	log.Printf("backend serving from %s", env.Addr)
-	app.New(env, db).Run(server)
+	app.Run()
 }
