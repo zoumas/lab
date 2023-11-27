@@ -16,6 +16,8 @@ type Env struct {
 	Addr string
 	// the single URL that will be allowed to make requests to the server. This is to be the frontend.
 	CorsOrigin string
+	// the Data Source Name for the database
+	DSN string
 }
 
 func Load() (*Env, error) {
@@ -39,9 +41,15 @@ func Load() (*Env, error) {
 		return nil, envVarNotSet("CORS_ORIGIN")
 	}
 
+	dsn, ok := os.LookupEnv("DSN")
+	if !ok {
+		return nil, envVarNotSet("DSN")
+	}
+
 	return &Env{
 		Addr:       addr,
 		CorsOrigin: corsOrigin,
+		DSN:        dsn,
 	}, nil
 }
 

@@ -13,3 +13,4 @@ Otherwise, the server considers the environment variables to be set from the Dev
 
 * `ADDR` - `hostname:port` the address the server will bind to and listen for incoming requests.
 * `CORS_ORIGIN` - the single URL that will be allowed to make requests to the server. This is to be the frontend.
+* `DSN` - the Data Source Name for the database
