@@ -12,8 +12,10 @@ import (
 // Env groups all the environment variables the application needs to run.
 // This is always implementation specific and so can't be generalized into a library.
 type Env struct {
-	// The hostname:post the server binds to and listens for incoming requests
+	// The hostname:post the server binds to and listens for incoming requests.
 	Addr string
+	// the single URL that will be allowed to make requests to the server. This is to be the frontend.
+	CorsOrigin string
 }
 
 func Load() (*Env, error) {
@@ -29,20 +31,20 @@ func Load() (*Env, error) {
 
 	addr, ok := os.LookupEnv("ADDR")
 	if !ok {
-		return nil, EnvVarNotSet("ADDR")
+		return nil, envVarNotSet("ADDR")
+	}
+
+	corsOrigin, ok := os.LookupEnv("CORS_ORIGIN")
+	if !ok {
+		return nil, envVarNotSet("CORS_ORIGIN")
 	}
 
 	return &Env{
-		Addr: addr,
+		Addr:       addr,
+		CorsOrigin: corsOrigin,
 	}, nil
 }
 
-func EnvVarNotSet(name string) error {
+func envVarNotSet(name string) error {
 	return fmt.Errorf("%s environment variable is not set", name)
-}
-
-// Empty returns a empty Env struct.
-// This is used in testing.
-func Empty() *Env {
-	return &Env{}
 }
