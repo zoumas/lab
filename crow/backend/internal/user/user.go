@@ -8,11 +8,9 @@ type User struct {
 	Password string `json:"-"    gorm:"size:72;not null"`
 }
 
-type CreateUserParams struct {
-	Name     string
-	Password string
-}
-
 type UserRepo interface {
 	Save(user User) error
+	GetAll() ([]User, error)
+	GetByName(name string) (User, error)
+	Delete(user User) error
 }

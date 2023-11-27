@@ -16,3 +16,15 @@ func NewUserService(repo database.GormUserRepo) *UserService {
 func (s *UserService) Save(user user.User) error {
 	return s.repo.Save(user)
 }
+
+func (s *UserService) GetAll() ([]user.User, error) {
+	return s.repo.GetAll()
+}
+
+func (s *UserService) GetByName(name string) (user.User, error) {
+	return s.repo.GetByName(name)
+}
+
+func (s *UserService) Delete(u user.User) error {
+	return s.repo.Delete(u)
+}

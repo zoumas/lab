@@ -31,6 +31,11 @@ func ConfiguredRouter(app *App) *chi.Mux {
 
 	usersRouter := chi.NewRouter()
 	usersRouter.Post("/", app.UserCreateHandler)
+	usersRouter.Get("/", app.UserRetrieveHandler)
+	usersRouter.Get("/{name}", app.UserGetByNameHandler)
+	usersRouter.Delete("/", app.WithPassword(app.UserDeleteHandler))
+
+	router.Post("/login", app.WithPassword(app.UserLoginHandler))
 
 	router.Mount("/users", usersRouter)
 

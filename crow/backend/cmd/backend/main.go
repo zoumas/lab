@@ -19,10 +19,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var dbVersion string
-	db.Raw("SELECT version()").Scan(&dbVersion)
-	log.Println("Database Version :", dbVersion)
-
 	app := app.New(env, db)
 	log.Printf("backend serving from %s", env.Addr)
 	app.Run()
