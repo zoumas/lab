@@ -18,7 +18,7 @@ func (s *ProdInvoiceServer) Create(
 	r *invoicer.CreateRequest,
 ) (*invoicer.CreateResponse, error) {
 	return &invoicer.CreateResponse{
-		Pdf:  []byte("test"),
+		Pdf:  []byte(r.From),
 		Docx: []byte("test"),
 	}, nil
 }
